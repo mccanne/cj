@@ -15,14 +15,22 @@ import (
 
 // takes stdin as csv and outputs as json
 
-func punt() {
-	fmt.Fprintln(os.Stderr, "usage: cj")
+func usage() {
+	fmt.Fprintln(os.Stderr, "usage: cj [-s]")
 	os.Exit(1)
 }
 
 func main() {
-	if len(os.Args) != 1 {
-		punt()
+	if len(os.Args) > 2 {
+		usage()
+	}
+	var stringsOnly bool
+	if len(os.Args) == 2 {
+		if os.Args[1] == "-s" {
+			stringsOnly = true
+		} else {
+			usage()
+		}
 	}
 	r := csv.NewReader(os.Stdin)
 	var hdr []string
@@ -41,18 +49,21 @@ func main() {
 			hdr = rec
 			continue
 		}
-		if err := translate(hdr, rec, object); err != nil {
+		if err := translate(hdr, rec, object, stringsOnly); err != nil {
 			log.Fatal(fmt.Errorf("line %d: %s", line, err))
 		}
 	}
 }
 
-func translate(hdr, rec []string, object map[string]interface{}) error {
+func translate(hdr, rec []string, object map[string]interface{}, stringsOnly bool) error {
 	if len(hdr) != len(rec) {
 		return errors.New("length of record doesn't match heading")
 	}
 	for k, field := range hdr {
 		val := rec[k]
+		if stringsOnly {
+			object[field] = val
+		}
 		lower := strings.ToLower(val)
 		if lower == "+inf" || lower == "inf" {
 			object[field] = math.MaxFloat64
